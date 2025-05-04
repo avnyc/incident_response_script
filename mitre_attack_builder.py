@@ -242,7 +242,7 @@ data = [
     # C2 beaconing to Pastebin
     [r"pastebin", None, None, "Command and Control", "Web Service: Upload Tool", "pastebin was used to host payloads or C2 data", False],
     
-    # Process Creation: krbrelay, Rubeus, Set-DomainObject, etc.
+    # Process Creation: krbrelay, Rubeus, Set-DomainObject
     ["krbrelay", None, None, "Privilege Escalation", "Abuse Elevation Control Mechanism: Kerberos Delegation", "Use of krbrelay tool to abuse delegation", False],
     ["rubeus", "tgtdeleg", None, "Credential Access", "Steal or Forge Kerberos Tickets", "Rubeus TGT delegation to extract TGTs", False],
     ["rubeus", None, None, "Credential Access", "Steal or Forge Kerberos Tickets", "Rubeus TGT delegation to extract TGTs", False],
@@ -268,6 +268,61 @@ data = [
     # Suspicious Parent-Child Processes
     ["powershell.exe", "krbrelay.exe", None, "Execution", "Command and Scripting Interpreter: PowerShell", "PowerShell spawning krbrelay", False],
     ["cmd.exe", "rubeus.exe", None, "Execution", "Command and Scripting Interpreter: Windows Command Shell", "Command line usage of Rubeus", False],
+
+    # Credential Access - Steal or Forge Certificates
+    ["certreq.exe", r"-submit", None, "Credential Access", "Steal or Forge Certificates", "Abuse of certreq.exe to submit certificate requests", False],
+
+    # Persistence - Abuse of Enrollment Agent template
+    ["certreq.exe", r"-attrib \"CertificateTemplate:EnrollmentAgent\"", None, "Persistence", "Create or Modify System Process: Windows Service", "Enrollment agent abuse with certreq.exe", False],
+
+    # Persistence - Abusing client-side certificate enrollment
+    ["certutil.exe", r"-submit", None, "Persistence", "Scheduled Task/Job: Scheduled Task Creation", "Abuse of certutil.exe to request or issue certificates", False],
+
+    # Lateral Movement - Certutil.exe used for certificate manipulation
+    ["certutil.exe", r"-dump", None, "Lateral Movement", "Transfer Data to Remote System", "certutil.exe dumping certificates for lateral movement", False],
+
+    # Credential Access - Abusing Certificate Templates
+    ["certutil.exe", r"-importPFX", None, "Credential Access", "OS Credential Dumping: Certificates", "Abuse of certutil.exe to import PFX files", False],
+
+    # Discovery - Enumerating Certificate Templates
+    ["certutil.exe", r"-template", None, "Discovery", "System Information Discovery", "certutil.exe enumerating available certificate templates", False],
+
+    # Discovery - Certutil Access to Web Enrollment Interface
+    ["http", r"/certsrv/", None, "Discovery", "Remote System Discovery", "HTTP access to certificate services for certificate enrollment", False],
+
+    # Execution - Abusing `web enrollment` process for requests
+    ["cmd.exe", r"certutil.exe", None, "Execution", "Command and Scripting Interpreter: Windows Command Shell", "Command line execution of certutil.exe for enrollment", False],
+
+    # Persistence - Web Enrollment abuse for CA key recovery
+    ["certutil.exe", r"-recover", None, "Persistence", "Create or Modify System Process: Windows Service", "Certutil recovery abuse for compromised CA keys", False],
+
+    # Defense Evasion - Disable CA logging (via registry)
+    ["reg.exe", r"EnterpriseCertificates", None, "Defense Evasion", "Modify Registry", "Modifying CA-related registry keys to evade detection", False],
+
+    # Discovery - Examining Certificate Authorities from `certutil`
+    ["certutil.exe", r"-CAinfo", None, "Discovery", "System Information Discovery", "Enumerating available Certificate Authorities", False],
+
+    # Defense Evasion - Certificate revocation list manipulation
+    ["certutil.exe", r"-CRL", None, "Defense Evasion", "Indicator Removal from Tools", "Manipulating Certificate Revocation List (CRL)", False],
+
+    # Lateral Movement - CA signing certificates for privilege escalation
+    ["certutil.exe", r"-f", None, "Lateral Movement", "Transfer Data to Remote System", "Certutil abused for forced certificate signing", False],
+
+    # Execution - Using CertEnroll to request certificates
+    ["certenroll.exe", None, None, "Execution", "Command and Scripting Interpreter: PowerShell", "PowerShell abusing certenroll.exe for certificate requests", False],
+
+    # Persistence - Template abuse for certificate creation (CSM)
+    ["certutil.exe", r"-verify", None, "Persistence", "Create or Modify System Process: Windows Service", "Certutil template abuse for creating certificates", False],
+
+    # Lateral Movement - Man-in-the-middle attack for certificate relay
+    ["openssl", r"req", None, "Lateral Movement", "Application Layer Protocol: HTTPS", "OpenSSL command for certificate relay attack", False],
+
+    # Discovery - Querying Active Directory for certificate templates
+    ["ldapsearch", r"CN=EnrollmentAgent", None, "Discovery", "System Information Discovery", "Query for Enrollment Agent templates via LDAP", False],
+
+    # Persistence - Use of `certutil` to maintain persistence via certificates
+    ["certutil.exe", r"-importPFX", None, "Persistence", "Create or Modify System Process: Windows Service", "Importing PFX certificate for persistent backdoor", False],
+
 
 ]
 
