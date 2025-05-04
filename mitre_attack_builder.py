@@ -1,4 +1,6 @@
+from pyvis.network import Network
 import pandas as pd
+import webbrowser
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -6,7 +8,7 @@ pd.set_option('expand_frame_repr', False)
 pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 
-# search_str1 | search_str2 |search_str3 | tactics | techniques | procedures | regex_value
+# search_str1 | search_str2 | search_str3 | tactics | techniques | procedures | regex_value
 data = [
     # ntdll.dll often used in low-level log tampering or hooking system functions
     ["ntdll.dll", None, None, "Defense Evasion", "Indicator Removal from Tools", "Disable or modify system logs (ntdll.dll)", False],
@@ -39,19 +41,19 @@ data = [
     ["sysmon", r"-accept", None, "Defense Evasion", "Impair Defenses: Disable or Modify Tools", "Attackers attempt to stop, uninstall, corrupt, or disable Sysmon to blind defenders and hide malicious activity (sysmon -accept)", False],
 
     # curl is commonly abused for payload delivery or exfil
-    ["curl.exe", None, None, "Command and Control / Exfiltration", "Ingress Tool Transfer", "curl.exe downloading or uploading payloads or data", False],
+    ["curl.exe", None, None, "Command and Control", "Ingress Tool Transfer", "curl.exe downloading or uploading payloads or data", False],
 
     # certutil used to download files or encode data
-    ["certutil.exe", None, None, "Command and Control / Defense Evasion / Exfiltration", "Ingress Tool Transfer", "certutil.exe was used  to download payloads, encode, or decode files", False],
+    ["certutil.exe", None, None, "Command and Control", "Ingress Tool Transfer", "certutil.exe was used  to download payloads, encode, or decode files", False],
 
     # cmd.exe is a generic shell used to run commands or scripts
     ["cmd.exe", None, None, "Execution", "Command and Scripting Interpreter: Windows Command Shell", "cmd.exe was used  to execute commands or scripts", False],
 
     # PowerShell is highly flexible and used for various malicious operations
-    ["powershell", None, None, "Execution / Defense Evasion / Persistence", "Command and Scripting Interpreter: PowerShell", "PowerShell was used  for execution, obfuscation, or persistence", False],
+    ["powershell", None, None, "Execution", "Command and Scripting Interpreter: PowerShell", "PowerShell was used  for execution, obfuscation, or persistence", False],
 
     # wscript runs VBS or JS scripts
-    ["wscript.exe", None, None, "Execution / Defense Evasion", "Command and Scripting Interpreter: Visual Basic", "wscript.exe was used  to execute VBS or JS files", False],
+    ["wscript.exe", None, None, "Execution or Defense Evasion", "Command and Scripting Interpreter: Visual Basic", "wscript.exe was used  to execute VBS or JS files", False],
 
     # cscript is CLI version of wscript
     ["cscript.exe", None, None, "Execution", "Command and Scripting Interpreter: Visual Basic", "cscript.exe was used  to execute VBS or JS files", False],
@@ -81,7 +83,7 @@ data = [
     [r"eventID\":\"4698", r"/create", None, "Persistence", "Scheduled Task/Job: Scheduled Task Creation", "Scheduled Task event and creation", False],
 
     # Sysmon Image Load Event ID 7 can indicate injection or sideloading
-    [r"eventID\":\"7", None, None, "Execution and Defense Evasion", "Image Load", "Malicious or unauthorized images loaded into memory", False],
+    [r"eventID\":\"7", None, None, "Execution or Defense Evasion", "Image Load", "Malicious or unauthorized images loaded into memory", False],
 
     # Registry key creation
     [r"eventID\":\"12", None, None, "Defense Evasion", "Modify Registry", "Registry key creation detected", False],
@@ -165,7 +167,7 @@ data = [
     [r"notepad.exe", None, None, "Defense Evasion", "Masquerading: Masquerade Task or Service", "notepad.exe was used  for process injection", False],
 
     # netsh used to manipulate Windows Firewall
-    [r"netsh.exe", None, None, "Defense Evasion / Command and Control", "Modify System Firewall", "netsh.exe modifying firewall rules", False],
+    [r"netsh.exe", None, None, "Command and Control", "Modify System Firewall", "netsh.exe modifying firewall rules", False],
 
     # netsh enabling RDP port 3389
     [r"netsh.exe", r"3389", None, "Command and Control", "Remote Services: RDP", "Firewall port 3389 opened", False],
@@ -241,8 +243,8 @@ data = [
 
     # C2 beaconing to Pastebin
     [r"pastebin", None, None, "Command and Control", "Web Service: Upload Tool", "pastebin was used to host payloads or C2 data", False],
-    
-    # Process Creation: krbrelay, Rubeus, Set-DomainObject
+
+    # Process Creation: krbrelay, Rubeus, Set-DomainObject, etc.
     ["krbrelay", None, None, "Privilege Escalation", "Abuse Elevation Control Mechanism: Kerberos Delegation", "Use of krbrelay tool to abuse delegation", False],
     ["rubeus", "tgtdeleg", None, "Credential Access", "Steal or Forge Kerberos Tickets", "Rubeus TGT delegation to extract TGTs", False],
     ["rubeus", None, None, "Credential Access", "Steal or Forge Kerberos Tickets", "Rubeus TGT delegation to extract TGTs", False],
@@ -325,5 +327,47 @@ data = [
 
 
 ]
+# Initialize the network. You might need to modify these settings for your laptop/desktop!
+net = Network(height="2500px", width="2500px", directed=True, notebook=False, cdn_resources='in_line')
+net.barnes_hut(gravity=-9000, central_gravity=0.2, spring_length=250, spring_strength=0.05)
+
+# Track nodes to avoid duplication
+added_nodes = set()
+
+# Group data by tactic
+tactic_groups = {}
+for entry in data:
+    _, _, _, tactic, technique, procedure, _ = entry
+    tactic_groups.setdefault(tactic, []).append((technique, procedure))
+
+# Build the org chart: tactic then technique then procedure
+for tactic, items in tactic_groups.items():
+    if tactic not in added_nodes:
+        net.add_node(tactic, label=tactic, shape="ellipse", color="#6FA8DC", font={"size": 50})
+        added_nodes.add(tactic)
+
+    techniques_seen = set()
+
+    for technique, procedure in items:
+        if technique not in techniques_seen:
+            if technique not in added_nodes:
+                net.add_node(technique, label=technique, shape="ellipse", color="#93C47D", font={"size": 40})
+                added_nodes.add(technique)
+            net.add_edge(tactic, technique)
+            techniques_seen.add(technique)
+
+        if procedure and procedure not in added_nodes:
+            net.add_node(procedure, label=procedure, shape="box", color="#FB7E81", font={"size": 30})
+            net.add_edge(technique, procedure)
+            added_nodes.add(procedure)
+
+# Create html path
+html_path = "TTPs_You_Are_Alerting_To.html"
+html_content = net.generate_html()
+# This will fail without UTF-8 encoding for some of my data.
+with open(html_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+webbrowser.open(html_path)
 
 mitre_attck_df = pd.DataFrame(data, columns=["search_str1","search_str2","search_str3","tactics", "techniques", "procedures", "regex_value"])
